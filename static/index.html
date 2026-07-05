@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concierge Inbox Triage Dashboard</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Markdown Parser -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="glow-bg"></div>
+  
+  <div class="container">
+    <!-- Header -->
+    <header class="main-header">
+      <div class="brand">
+        <div class="logo">📧</div>
+        <div class="title-area">
+          <h1>Concierge Triage Agent</h1>
+          <p class="subtitle">AI-powered Workspace Triage & Calendar Co-Pilot</p>
+        </div>
+      </div>
+      <div class="status-badge" id="agent-status">
+        <span class="dot"></span> <span class="status-text">Idle</span>
+      </div>
+    </header>
+
+    <!-- Dashboard Grid -->
+    <main class="dashboard-grid">
+      <!-- Control Panel -->
+      <section class="card control-panel">
+        <h2>Control Panel</h2>
+        <p class="section-desc">Select execution mode and run the ADK Agent loop.</p>
+        
+        <div class="control-group">
+          <label class="mode-label">Execution Mode</label>
+          <div class="mode-selector">
+            <button class="mode-btn active" data-mode="mock">
+              <span class="mode-title">Simulation Mode</span>
+              <span class="mode-desc">Uses mocked Workspace APIs</span>
+            </button>
+            <button class="mode-btn" data-mode="live">
+              <span class="mode-title">Live Sync</span>
+              <span class="mode-desc">Connects to Gmail & Calendar</span>
+            </button>
+          </div>
+        </div>
+
+        <button class="run-btn" id="run-triage-btn">
+          <span class="btn-text">Run Triage Agent</span>
+          <span class="loader hidden"></span>
+        </button>
+
+        <div class="error-container hidden" id="error-box">
+          <div class="error-icon">⚠️</div>
+          <div class="error-content">
+            <h4 class="error-title">Execution Error</h4>
+            <p class="error-message" id="error-msg">Something went wrong.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Key Metrics -->
+      <section class="metrics-container">
+        <div class="metric-card" id="metric-emails">
+          <div class="metric-icon">📧</div>
+          <div class="metric-info">
+            <span class="metric-value">0</span>
+            <span class="metric-label">Emails Triaged</span>
+          </div>
+        </div>
+        <div class="metric-card" id="metric-events">
+          <div class="metric-icon">📅</div>
+          <div class="metric-info">
+            <span class="metric-value">0</span>
+            <span class="metric-label">Meetings Scheduled</span>
+          </div>
+        </div>
+        <div class="metric-card" id="metric-drafts">
+          <div class="metric-icon">📝</div>
+          <div class="metric-info">
+            <span class="metric-value">0</span>
+            <span class="metric-label">Drafts Created</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Realtime Progress Console -->
+      <section class="card console-card">
+        <h2>Execution Progress Logs</h2>
+        <p class="section-desc">Real-time status updates from the ADK Runner and local MCP server subprocess.</p>
+        <div class="console-wrapper">
+          <div class="console-header">
+            <span class="console-title">terminal-output</span>
+            <button class="clear-btn" id="clear-console-btn">Clear Logs</button>
+          </div>
+          <div class="console-logs" id="console-output">
+            <div class="log-line system-line">[System] Agent ready. Select a mode and click Run.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Triage Report -->
+      <section class="card report-card">
+        <h2>Triage Summary & Action Report</h2>
+        <p class="section-desc">Rendered markdown report produced by the agent containing the classified threads and actions taken.</p>
+        <div class="report-content" id="report-output">
+          <div class="empty-report-state">
+            <div class="empty-icon">📊</div>
+            <h3>No Report Generated</h3>
+            <p>Once you execute the triage agent, the final markdown report and breakdown table will render here.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+      <p>Built with Google Agent Development Kit (ADK) & Model Context Protocol (MCP) | Capstone Project Submission</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
