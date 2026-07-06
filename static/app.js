@@ -134,7 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function parseAndSetMetrics(summaryText) {
     // Regex looking for the specific instructions pattern:
     // 'You had X emails. I drafted Y replies for urgent meetings, scheduled Z events...'
-    const regex = /You had (\d+) emails\. I drafted (\d+) replies for urgent meetings, scheduled (\d+) events/i;
+    // Supports singular/plural variations.
+    const regex = /You had (\d+) emails?\. I drafted (\d+) repl(?:ies|y) for urgent meetings, scheduled (\d+) events?/i;
     const match = summaryText.match(regex);
     
     if (match) {
@@ -146,13 +147,29 @@ document.addEventListener('DOMContentLoaded', () => {
       animateNumber(metricEvents, parseInt(eventsCount));
       animateNumber(metricDrafts, parseInt(draftsCount));
     } else {
-      // Fallback: manually search counts of keywords
-      // e.g., counting scheduled events or drafts in text
-      const draftMatches = (summaryText.match(/draft/gi) || []).length;
-      const eventMatches = (summaryText.match(/schedule|event/gi) || []).length;
-      metricEmails.textContent = '-';
-      metricEvents.textContent = eventMatches > 0 ? eventMatches : '0';
-      metricDrafts.textContent = draftMatches > 0 ? draftMatches : '0';
+      // Fallback: search counts of keywords only in the non-table description text preceding the table
+      const lines = summaryText.split('\n');
+      let textHeader = '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('|')) {
+          textHeader += ' ' + trimmed;
+        } else if (trimmed.startsWith('|')) {
+          break;
+        }
+      }
+      
+      const emailMatch = textHeader.match(/(\d+)\s+emails?/i) || textHeader.match(/had\s+(\d+)/i);
+      const draftMatch = textHeader.match(/(\d+)\s+repl(?:ies|y)/i) || textHeader.match(/drafted\s+(\d+)/i);
+      const eventMatch = textHeader.match(/(\d+)\s+events?/i) || textHeader.match(/scheduled\s+(\d+)/i);
+      
+      const emailsCount = emailMatch ? parseInt(emailMatch[1]) : 0;
+      const draftsCount = draftMatch ? parseInt(draftMatch[1]) : 0;
+      const eventsCount = eventMatch ? parseInt(eventMatch[1]) : 0;
+      
+      animateNumber(metricEmails, emailsCount);
+      animateNumber(metricEvents, eventsCount);
+      animateNumber(metricDrafts, draftsCount);
     }
   }
 

@@ -56,6 +56,22 @@ class WorkspaceMCPClient:
                 return text
         return result
 
+    def _format_rfc3339(self, dt_str: str) -> str:
+        """
+        Safely formats a datetime string for Google REST APIs by ensuring timezone.
+        """
+        if not dt_str:
+            return dt_str
+        if dt_str.endswith("Z"):
+            return dt_str
+        t_index = dt_str.find("T")
+        if t_index != -1:
+            suffix = dt_str[t_index:]
+            if "+" in suffix or "-" in suffix:
+                return dt_str
+        return dt_str + "Z"
+
+
     def call_tool(self, server_url: str, tool_name: str, arguments: dict = None) -> dict:
         """
         Invokes a tool on an MCP HTTP server using JSON-RPC 2.0.
@@ -151,12 +167,16 @@ class WorkspaceMCPClient:
         try:
             raw_res = self.call_tool(config.GMAIL_MCP_URL, "search_threads", {"query": query, "pageSize": max_results})
             return self._parse_mcp_result(raw_res)
-        except PermissionError as e:
-            print(f"[REST Fallback] Gmail MCP search_threads failed with permission error. Executing REST call...")
+        except Exception as e:
+            print(f"[REST Fallback] Gmail MCP search_threads failed: {e}. Executing REST call...")
             headers = self._get_headers()
-            url = f"https://gmail.googleapis.com/gmail/v1/users/me/threads?q={query}&maxResults={max_results}"
+            url = "https://gmail.googleapis.com/gmail/v1/users/me/threads"
+            params = {
+                "q": query,
+                "maxResults": max_results
+            }
             with httpx.Client(timeout=15.0) as client:
-                res = client.get(url, headers=headers)
+                res = client.get(url, params=params, headers=headers)
                 res.raise_for_status()
                 return res.json()
 
@@ -167,8 +187,8 @@ class WorkspaceMCPClient:
         try:
             raw_res = self.call_tool(config.GMAIL_MCP_URL, "get_thread", {"threadId": thread_id})
             return self._parse_mcp_result(raw_res)
-        except PermissionError:
-            print(f"[REST Fallback] Gmail MCP get_thread failed. Executing direct REST API call...")
+        except Exception as e:
+            print(f"[REST Fallback] Gmail MCP get_thread failed: {e}. Executing direct REST API call...")
             headers = self._get_headers()
             url = f"https://gmail.googleapis.com/gmail/v1/users/me/threads/{thread_id}"
             with httpx.Client(timeout=15.0) as client:
@@ -198,8 +218,8 @@ class WorkspaceMCPClient:
         try:
             raw_res = self.call_tool(config.GMAIL_MCP_URL, "create_draft", {"draft": draft})
             return self._parse_mcp_result(raw_res)
-        except PermissionError:
-            print(f"[REST Fallback] Gmail MCP create_draft failed. Executing direct REST API call...")
+        except Exception as e:
+            print(f"[REST Fallback] Gmail MCP create_draft failed: {e}. Executing direct REST API call...")
             headers = self._get_headers()
             
             # Format raw MIME message
@@ -246,16 +266,20 @@ class WorkspaceMCPClient:
                 {"startTime": start_time, "endTime": end_time, "pageSize": page_size}
             )
             return self._parse_mcp_result(raw_res)
-        except PermissionError:
-            print(f"[REST Fallback] Calendar MCP list_events failed. Executing direct REST API call...")
+        except Exception as e:
+            print(f"[REST Fallback] Calendar MCP list_events failed: {e}. Executing direct REST API call...")
             headers = self._get_headers()
-            # Ensure Z format for REST API
-            time_min = start_time if start_time.endswith("Z") else start_time + "Z"
-            time_max = end_time if end_time.endswith("Z") else end_time + "Z"
+            time_min = self._format_rfc3339(start_time)
+            time_max = self._format_rfc3339(end_time)
             
-            url = f"https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin={time_min}&timeMax={time_max}&maxResults={page_size}"
+            url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+            params = {
+                "timeMin": time_min,
+                "timeMax": time_max,
+                "maxResults": page_size
+            }
             with httpx.Client(timeout=15.0) as client:
-                res = client.get(url, headers=headers)
+                res = client.get(url, params=params, headers=headers)
                 res.raise_for_status()
                 data = res.json()
                 return {"events": data.get("items", [])}
@@ -277,8 +301,8 @@ class WorkspaceMCPClient:
                 }
             )
             return self._parse_mcp_result(raw_res)
-        except PermissionError:
-            print(f"[REST Fallback] Calendar MCP suggest_time failed. Falling back to local slot calculation...")
+        except Exception as e:
+            print(f"[REST Fallback] Calendar MCP suggest_time failed: {e}. Falling back to local slot calculation...")
             # Fallback local logic using list_events
             events_res = self.list_events(start_time, end_time, page_size=100)
             events = events_res.get("events", [])
@@ -340,16 +364,16 @@ class WorkspaceMCPClient:
                 args["description"] = description
             raw_res = self.call_tool(config.CALENDAR_MCP_URL, "create_event", args)
             return self._parse_mcp_result(raw_res)
-        except PermissionError:
-            print(f"[REST Fallback] Calendar MCP create_event failed. Executing direct REST API call...")
+        except Exception as e:
+            print(f"[REST Fallback] Calendar MCP create_event failed: {e}. Executing direct REST API call...")
             headers = self._get_headers()
             
             # Format standard Calendar API event body
             payload = {
                 "summary": summary,
                 "description": description or "",
-                "start": {"dateTime": start_time},
-                "end": {"dateTime": end_time}
+                "start": {"dateTime": self._format_rfc3339(start_time)},
+                "end": {"dateTime": self._format_rfc3339(end_time)}
             }
             
             url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
